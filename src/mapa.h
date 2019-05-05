@@ -4,9 +4,6 @@
 #include <simulador.h>
 #include <stdbool.h>
 
-// Crea el mapa y pone las casillas a menos uno
-tipo_mapa *create_mapa();
-
 // Pone una casilla del mapa a vacío
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx);
 

@@ -3,24 +3,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 
 char symbol_equipos[N_EQUIPOS] ={'A','B','C'};
-
-tipo_mapa *create_mapa()
-{
-	int i, j;
-	
-	tipo_mapa *mapa = calloc(1, sizeof(tipo_mapa));
-
-	// Init casillas (because they are zero right now)
-	for(j=0;j<MAPA_MAXY;j++) {
-		for(i=0;i<MAPA_MAXX;i++) {
-			mapa_clean_casilla(mapa, j, i);
-		}
-	}
-
-	return mapa;
-}
 
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx)
 {
@@ -86,11 +71,18 @@ void mapa_set_symbol(tipo_mapa *mapa, int posy, int posx, char symbol)
 	mapa->casillas[posy][posx].simbolo=symbol;
 }
 
-
 int mapa_set_nave(tipo_mapa *mapa, tipo_nave nave)
 {
-	if (nave.equipo >= N_EQUIPOS) return -1;
-	if (nave.numNave >= N_NAVES) return -1;
+	if (nave.equipo >= N_EQUIPOS) {
+		printf("[ERROR] Equipo de la nave incorrecto\n");
+		return -1;
+	}
+
+	if (nave.numNave >= N_NAVES) {
+		printf("[ERROR] Numero de la nave incorrecto\n");
+		return -1;
+	}
+
 	mapa->info_naves[nave.equipo][nave.numNave]=nave;
 	if (nave.viva) {
 		mapa->casillas[nave.posy][nave.posx].equipo=nave.equipo;

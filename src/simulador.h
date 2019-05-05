@@ -22,7 +22,8 @@ extern char symbol_equipos[N_EQUIPOS]; // Símbolos de los diferentes equipos en
 #define ATAQUE_DANO 10 // Daño de un ataque
 #define MOVER_ALCANCE 1 // Máximo de casillas a mover
 #define TURNO_SECS 5 // Segundos que dura un turno
-
+#define ALIVE 1 // La nave esta viva
+#define DEAD 0 // La nave esta muerta
 
 /*** MAPA ***/
 // Información de nave
@@ -42,12 +43,18 @@ typedef struct {
 	int numNave; // Número de nave en el equipo de la nave que está en la casilla
 } tipo_casilla;
 
-
+// Informacion sobre el propio mapa
 typedef struct {
 	tipo_nave info_naves[N_EQUIPOS][N_NAVES];
 	tipo_casilla casillas[MAPA_MAXY][MAPA_MAXX];
 	int num_naves[N_EQUIPOS]; // Número de naves vivas en un equipo
 } tipo_mapa;
+
+// Estructura para guardar coordenadas
+typedef struct {
+	int x;
+	int y;
+} coords;
 
 #define SHM_MAP_NAME "/shm_naves"
 

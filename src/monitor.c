@@ -33,13 +33,10 @@ void mapa_print(tipo_mapa *mapa)
 
 
 int main() {
-	tipo_mapa *mapa = create_mapa();
-
 	screen_init();
 
 	while (1) {
 		sleep(1);
-		mapa_print(mapa);
 	}
 
 	screen_end();

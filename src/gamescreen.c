@@ -23,4 +23,3 @@ void screen_refresh()
 void screen_end() {
 	endwin();
 }
-
