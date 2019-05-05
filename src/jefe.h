@@ -28,5 +28,4 @@ int random_posicion_x();
 /*elige un numero aleatorio para mover a la nave*/
 int random_posicion_y();
 
-
 #endif /* JEFE_H_ */
