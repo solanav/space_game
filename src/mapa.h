@@ -1,8 +1,16 @@
 #ifndef SRC_MAPA_H_
 #define SRC_MAPA_H_
 
-#include <simulador.h>
+#include <math.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <stdbool.h>
+
+#include "simulador.h"
+#include "naves.h"
+#include "jefe.h"
+
 
 // Pone una casilla del mapa a vacío
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx);
@@ -11,7 +19,7 @@ int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx);
 tipo_casilla mapa_get_casilla(tipo_mapa *mapa, int posy, int posx);
 
 // Obtiene la distancia entre dos posiciones del mapa
-int mapa_get_distancia(tipo_mapa *mapa, int oriy,int orix,int targety,int targetx);
+int mapa_get_distancia(/*tipo_mapa *mapa,*/ int oriy,int orix,int targety,int targetx);
 
 // Obtiene información sobre una nave a partir del equipo y el número de nave
 tipo_nave mapa_get_nave(tipo_mapa *mapa, int equipo, int num_nave);

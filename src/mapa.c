@@ -1,9 +1,6 @@
 #include "mapa.h"
-#include <stdbool.h>
-#include <math.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
+
+
 
 char symbol_equipos[N_EQUIPOS] ={'A','B','C'};
 
@@ -20,7 +17,7 @@ tipo_casilla mapa_get_casilla(tipo_mapa *mapa, int posy, int posx)
 	return mapa->casillas[posy][posx];
 }
 
-int mapa_get_distancia(tipo_mapa *mapa, int oriy,int orix,int targety,int targetx)
+int mapa_get_distancia(/*tipo_mapa *mapa,*/ int oriy,int orix,int targety,int targetx)
 {
 	int distx,disty;
 
@@ -138,4 +135,3 @@ void mapa_send_misil(tipo_mapa *mapa, int origeny, int origenx, int targety, int
 
 	mapa_set_symbol(mapa,py, px,ps);
 }
-
