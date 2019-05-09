@@ -51,12 +51,6 @@ typedef struct {
 	int num_naves[N_EQUIPOS]; // Número de naves vivas en un equipo
 } tipo_mapa;
 
-// Estructura para guardar coordenadas
-typedef struct {
-	int x;
-	int y;
-} Coords;
-
 #define SHM_MAP_NAME "/shm_naves"
 
 #endif /* SRC_SIMULADOR_H_ */

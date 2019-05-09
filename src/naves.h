@@ -21,12 +21,13 @@
 
 typedef struct {
 	int orden;
-	Coords destino;
-	Coords origen;
+	int id;
+	int team;
+	int dir;
 } Nave_orden;
 
 // Main function
-int naves_main(int id, int tuberia_nave[2]);
+int naves_main(int id, int team, int tuberia_nave[2]);
 
 // Funcion para crear la cola de mensajes nave->simulador
 int create_queue();

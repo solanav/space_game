@@ -10,9 +10,11 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <mqueue.h>
-#include "naves.h"
 
-int naves_main(int id, int tuberia_nave[2])
+#include "naves.h"
+#include "mapa.h"
+
+int naves_main(int id, int team, int tuberia_nave[2])
 {
 	mqd_t queue;
 	struct mq_attr attributes;
@@ -25,8 +27,8 @@ int naves_main(int id, int tuberia_nave[2])
 	attributes.mq_msgsize = sizeof(Nave_orden);
 
 	queue = mq_open(QUEUE_NAME,
-					O_CREAT | O_RDWR, /* This process is only going to send messages */
-					S_IRUSR | S_IWUSR,  /* The user can read and write */
+					O_CREAT | O_RDWR,  /* This process is only going to send messages */
+					S_IRUSR | S_IWUSR, /* The user can read and write */
 					&attributes);
 
 	if (queue == (mqd_t)-1)
@@ -37,7 +39,7 @@ int naves_main(int id, int tuberia_nave[2])
 	}
 
 	/*comprbamos si se ha recibido de forma correcta la tuberia para poder realizar su lecturas*/
-	if(tuberia_nave == 0)
+	if (tuberia_nave == 0)
 		return -1;
 
 	/* Leemos el mensaje que nos ha enviado el jefe */
@@ -45,37 +47,28 @@ int naves_main(int id, int tuberia_nave[2])
 	close(tuberia_nave[1]);
 
 #ifdef DEBUG
-	printf("<NAVE %d> Accion recibida: %c\n", id, accion_recibida[0]);
+	printf("\t<NAVE %d> Accion recibida: %c\n", id, accion_recibida[0]);
 #endif
 
 	// We send the corresponding order to simulador so it executes it
-	if (accion_recibida[0] == 'M') { // MOVE
-		Nave_orden orden_test;
-		orden_test.orden = 0;
-		orden_test.origen.x = 5;
-		orden_test.origen.y = 6;
-		orden_test.destino.x = 7;
-		orden_test.destino.y = 8;
+	Nave_orden orden;
+	orden.id = id;
+	orden.team = team;
+	orden.dir = rand() % 4;
 
-#ifdef DEBUG
-		printf("<NAVE %d> Sending action to simulator\n", id);
-#endif
-
-		send_msg(queue, orden_test);
+	if (accion_recibida[0] == 'M')
+	{ // MOVE
+		orden.orden = 0;
+		send_msg(queue, orden);
 	}
-	else if (accion_recibida[0] == 'A') { // ATTACK
-		Nave_orden orden_test;
-		orden_test.orden = 1;
-		orden_test.origen.x = 5;
-		orden_test.origen.y = 6;
-		orden_test.destino.x = 7;
-		orden_test.destino.y = 8;
-
-#ifdef DEBUG
-		printf("<NAVE %d> Sending action to simulator\n", id);
-#endif
-
-		send_msg(queue, orden_test);
+	else if (accion_recibida[0] == 'A')
+	{ // ATTACK
+		orden.orden = 1;
+		send_msg(queue, orden);
+	}
+	else
+	{
+		printf("[ERROR] Failed to find the action sent to ship\n");
 	}
 
 	mq_close(queue);
@@ -84,7 +77,8 @@ int naves_main(int id, int tuberia_nave[2])
 
 int send_msg(mqd_t queue, Nave_orden msg)
 {
-	if (mq_send(queue, (char *) &msg, sizeof(msg), 1) == -1) {
+	if (mq_send(queue, (char *)&msg, sizeof(msg), 1) == -1)
+	{
 		printf("[ERROR] Cannot send a message through the queue\n");
 		printf("%s", strerror(errno));
 	}

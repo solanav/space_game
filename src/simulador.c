@@ -21,53 +21,92 @@
 
 int jefe_pipe[N_EQUIPOS][2];
 
-Coords random_coords(tipo_mapa *mapa, int team)
+tipo_nave select_enemy(tipo_mapa *mapa, tipo_nave nave)
 {
-	Coords r_coords;
-	int found_empty_space = 0;
+	tipo_nave enemigo;
 
-	while (found_empty_space == 0)
+	for (int i = 0; i < N_EQUIPOS; i++)
 	{
-		r_coords.x = rand() % MAPA_MAXX;
-		r_coords.y = rand() % MAPA_MAXY;
+		if (i == nave.equipo)
+			continue;
 
-		if (mapa_is_casilla_vacia(mapa, r_coords.x, r_coords.y))
-			found_empty_space = 1;
+		// Para cada nave de los equipos enemigos
+		for (int j = 0; j < N_NAVES; j++)
+		{
+			enemigo = mapa_get_nave(mapa, i, j);
+
+			if (mapa_get_distancia(enemigo.posy, enemigo.posx,
+								   nave.posy, nave.posx) <= ATAQUE_ALCANCE)
+			{
+				return enemigo;
+			}
+		}
 	}
 
-	return r_coords;
+	enemigo.numNave = -1;
+	return enemigo;
 }
 
 int execute_order(tipo_mapa *mapa, Nave_orden order)
 {
+	tipo_nave nave = mapa_get_nave(mapa, order.team, order.id);
+	Coords destino;
+
+	switch (order.dir)
+	{
+	case 0:
+		destino.x = nave.posx + 1;
+		destino.y = nave.posy;
+		break;
+	case 1:
+		destino.x = nave.posx - 1;
+		destino.y = nave.posy;
+		break;
+	case 2:
+		destino.x = nave.posx;
+		destino.y = nave.posy + 1;
+		break;
+	default:
+		destino.x = nave.posx;
+		destino.y = nave.posy - 1;
+		break;
+	}
+
 	switch (order.orden)
 	{
 	case 0: // MOVER
-#ifdef DEBUG
-		printf("Moving order by ship\n");
-#endif
-		if (!is_casilla_inside(mapa, order.destino.y, order.destino.x))
+		if (!is_casilla_inside(mapa, destino.y, destino.x))
 			return EXIT_FAILURE;
 
-		if (!mapa_is_casilla_vacia(mapa, order.destino.y, order.destino.x))
+		if (!mapa_is_casilla_vacia(mapa, destino.y, destino.x))
 			return EXIT_FAILURE;
 
-		// realizar accion
+		// limpiar casilla anterior
+		mapa_clean_casilla(mapa, nave.posy, nave.posx);
+
+		// actualizar coordenadas
+		nave.posx = destino.x;
+		nave.posy = destino.y;
+
+		// colocar la nave
+		mapa_set_nave(mapa, nave);
 
 		break;
 
 	case 1: // ATACAR
-#ifdef DEBUG
-		printf("Attacking order by ship\n");
-#endif
-		if (!is_casilla_inside(mapa, order.destino.y, order.destino.x))
-			return EXIT_FAILURE;
-
-		if (mapa_get_distancia(order.destino.y, order.destino.x,
-							   order.origen.y, order.origen.x) > ATAQUE_ALCANCE)
+		if (!is_casilla_inside(mapa, destino.y, destino.x))
 			return EXIT_FAILURE;
 
 		// realizar accion
+		tipo_nave enemigo = select_enemy(mapa, nave);
+		if (enemigo.numNave == -1)
+		{
+			printf("<NAVE %d> Could not find ships nearby", nave.numNave);
+			break;
+		}
+
+		// Shoot
+		mapa_send_misil(mapa, nave.posy, nave.posx, enemigo.posy, enemigo.posx);
 
 		break;
 
@@ -173,7 +212,7 @@ int main()
 	{
 		for (j = 0; j < N_NAVES; j++)
 		{
-			Coords r_coords = random_coords(mapa, i);
+			Coords r_coords = random_coords(mapa);
 
 			nave.vida = VIDA_MAX;
 			nave.posx = r_coords.x;
@@ -261,7 +300,7 @@ int main()
 
 		// Manda los turnos a los jefes
 #ifdef DEBUG
-		printf("Sending TURNO to all jefes\n");
+		printf("\n\n\nSending TURNO to all jefes\n");
 #endif
 		for (int i = 0; i < N_EQUIPOS; i++)
 			write(jefe_pipe[i][1], "TURNO", strlen("TURNO"));
@@ -269,8 +308,8 @@ int main()
 #ifdef DEBUG
 		printf("Waiting to receive actions from ships\n");
 #endif
-		// Execute actions sent by ships
-		for (int i = 0; i < N_NAVES; i++)
+		// Execute 2 actions per ship
+		for (int i = 0; i < N_NAVES * 2; i++)
 		{
 			Nave_orden rec_test;
 			receive_msg(queue, &rec_test);

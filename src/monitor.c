@@ -70,7 +70,6 @@ int main()
 
 	while (1) {
 		mapa_print(mapa);
-		sleep(1);
 	}
 
 	screen_end();

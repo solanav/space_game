@@ -9,6 +9,15 @@
 
 #include "simulador.h"
 
+// Estructura para guardar coordenadas
+typedef struct {
+	int x;
+	int y;
+} Coords;
+
+// Genera coordenadas al azar
+Coords random_coords(tipo_mapa *mapa);
+
 // Comprueba que una casilla este dentro del mapa
 bool is_casilla_inside(tipo_mapa *mapa, int posy, int posx);
 

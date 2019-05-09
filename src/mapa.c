@@ -1,8 +1,23 @@
 #include "mapa.h"
 
+char symbol_equipos[N_EQUIPOS] = {'A','B','C'};
 
+Coords random_coords(tipo_mapa *mapa)
+{
+	Coords r_coords;
+	int found_empty_space = 0;
 
-char symbol_equipos[N_EQUIPOS] ={'A','B','C'};
+	while (found_empty_space == 0)
+	{
+		r_coords.x = rand() % MAPA_MAXX;
+		r_coords.y = rand() % MAPA_MAXY;
+
+		if (mapa_is_casilla_vacia(mapa, r_coords.x, r_coords.y))
+			found_empty_space = 1;
+	}
+
+	return r_coords;
+}
 
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx)
 {

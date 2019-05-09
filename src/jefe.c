@@ -61,7 +61,7 @@ int jefe_main(int id, int tuberia[2])
 #ifdef DEBUG
 			printf("~~~ [JEFE %d] Launching ship %d\n", id, i);
 #endif
-			naves_main(i, nave_pipe[i]);
+			naves_main(i, id, nave_pipe[i]);
 			exit(EXIT_SUCCESS);
 		}
 	}
