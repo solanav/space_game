@@ -115,12 +115,10 @@ int main()
 	}
 
 	sem_post(ready);
-	sleep(100);
 
 	// Create pipes for jefes
 	for (i = 0; i < N_EQUIPOS; i++) {
 		if (pipe(jefe_pipe[i]) == -1) {
-			// TODO: Perdida de memoria
 			printf("[ERROR] No se ha podido crear el pipe para la jefa\n");
 			ret = 1;
 			goto FREE_SEM;
@@ -136,7 +134,7 @@ int main()
 			ret = 1;
 			goto FREE_ALL;
 		}
-		else if (teams[i] == 0) {
+		else if (teams[i] == 0) { // JEFE
 			// Avisar de que estoy ready
 			write(jefe_pipe[i][1], buff, strlen(buff));
 			goto FREE_ALL;
