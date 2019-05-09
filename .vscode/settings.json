@@ -2,6 +2,7 @@
 	"files.associations": {
 		"stdbool.h": "c",
 		"unistd.h": "c",
-		"mqueue.h": "c"
+		"mqueue.h": "c",
+		"stat.h": "c"
 	}
 }
