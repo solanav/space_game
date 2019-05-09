@@ -205,7 +205,7 @@ int main()
 			goto FREE_PIPES;
 		}
 		else if (teams[i] == 0) { // JEFE
-			pipe_since_simulador(jefe_pipe[i]);
+			jefe_main(i, jefe_pipe[i]);
 			goto FREE_PIPES;
 		}
 	}

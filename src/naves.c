@@ -12,17 +12,18 @@
 #include <mqueue.h>
 #include "naves.h"
 
-int main()
+int naves_main(int id, int tuberia_nave[2])
 {
 	mqd_t queue;
 	struct mq_attr attributes;
+	char accion_recibida[32] = "X";
 
+	// Create and open the queue
 	attributes.mq_flags = 0;
 	attributes.mq_maxmsg = 10;
 	attributes.mq_curmsgs = 0;
 	attributes.mq_msgsize = sizeof(Nave_orden);
 
-	// Open the queue
 	queue = mq_open(QUEUE_NAME,
 					O_CREAT | O_RDWR, /* This process is only going to send messages */
 					S_IRUSR | S_IWUSR,  /* The user can read and write */
@@ -30,22 +31,47 @@ int main()
 
 	if (queue == (mqd_t)-1)
 	{
-		fprintf(stderr, "Error opening the queue\n");
+		printf("[ERROR] Error opening the queue\n");
 		printf("%s", strerror(errno));
 		return -1;
 	}
 
-	Nave_orden orden_test;
-	orden_test.orden = 0;
-	orden_test.origen.x = 5;
-	orden_test.origen.y = 6;
-	orden_test.destino.x = 7;
-	orden_test.destino.y = 8;
-	send_msg(queue, orden_test);
+	/*comprbamos si se ha recibido de forma correcta la tuberia para poder realizar su lecturas*/
+	if(tuberia_nave == 0)
+		return -1;
+
+	/* Leemos el mensaje que nos ha enviado el jefe */
+	read(tuberia_nave[0], &accion_recibida, sizeof(accion_recibida));
+	close(tuberia_nave[1]);
+
+#ifdef DEBUG
+	printf("<NAVE %d> Accion recibida: %s\n", id, accion_recibida);
+#endif
+
+	// We send the corresponding order to simulador so it executes it
+	if (strcmp(accion_recibida, "M") == 0) { // MOVE
+		Nave_orden orden_test;
+		orden_test.orden = 0;
+		orden_test.origen.x = 5;
+		orden_test.origen.y = 6;
+		orden_test.destino.x = 7;
+		orden_test.destino.y = 8;
+
+		send_msg(queue, orden_test);
+	}
+	else if (strcmp(accion_recibida, "A") == 0) { // ATTACK
+		Nave_orden orden_test;
+		orden_test.orden = 1;
+		orden_test.origen.x = 5;
+		orden_test.origen.y = 6;
+		orden_test.destino.x = 7;
+		orden_test.destino.y = 8;
+
+		send_msg(queue, orden_test);
+	}
 
 	mq_close(queue);
-
-	return 1;
+	exit(EXIT_SUCCESS);
 }
 
 int send_msg(mqd_t queue, Nave_orden msg)

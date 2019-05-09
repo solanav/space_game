@@ -7,7 +7,7 @@ LDLIBS = -lrt -lncurses -lm -D DEBUG
 BOLD=\e[1m
 NC=\e[0m
 
-all: simulador monitor naves
+all: simulador monitor
 
 call: clean all
 
@@ -18,7 +18,7 @@ clean:
 
 simulador:
 	mkdir -p $(TARGET)
-	$(CC) $(CFLAGS) mapa.c jefe.c simulador.c -o $(TARGET)/simulador $(LDLIBS)
+	$(CC) $(CFLAGS) naves.c mapa.c jefe.c simulador.c -o $(TARGET)/simulador $(LDLIBS)
 
 monitor:
 	mkdir -p $(TARGET)
@@ -26,7 +26,7 @@ monitor:
 
 jefe:
 	mkdir -p $(TARGET)
-	$(CC) $(CFLAGS) mapa.c simulador.c jefe.c -o $(TARGET)/monitor $(LDLIBS)
+	$(CC) $(CFLAGS) naves.c mapa.c simulador.c jefe.c -o $(TARGET)/monitor $(LDLIBS)
 
 naves:
 	mkdir -p $(TARGET)

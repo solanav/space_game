@@ -15,102 +15,86 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/random.h>
-
+#include <sys/wait.h>
 #include <time.h>
 #include <semaphore.h>
 #include <fcntl.h>
 
 #include "jefe.h"
 #include "simulador.h"
+#include "naves.h"
 
 #define SEM "/sem_shared_memory"
-#define MAX_MENSAJE 16
+#define MAX_MENSAJE 32
 
-/*VARIABLES GLOBALES*/
-sem_t *sem_shared_memory = NULL;
-
-/*se elimina el semaforo y el mapeo*/
-void delete_recurses()
+int jefe_main(int id, int tuberia[2])
 {
-	tipo_mapa *mapa = NULL;
-	/* HAY QUE TENER EN CUENTA ( CERRAR Y ELIMINAR EL SEMÁFORO  Y EL MAPEO )*/
-	mapa = open_shared_memory();
-	if (!mapa)
-		return;
-
-	munmap(mapa, sizeof(*mapa));
-	shm_unlink(SHM_MAP_NAME);
-
-	sem_close(sem_shared_memory);
-	sem_unlink(SEM);
-}
-
-tipo_mapa *open_shared_memory()
-{
-	int fd_shm;
-	tipo_mapa *mapa = NULL;
-	/* Creamos un semaforo para que dos procesos no puedan acceder a la vez */
-	sem_shared_memory = sem_open(SEM, O_CREAT, S_IRUSR | S_IWUSR, 1);
-	if (sem_shared_memory == SEM_FAILED)
-	{
-		perror("sem_shared_memory");
-		return NULL;
-	}
-
-	sem_wait(sem_shared_memory);
-
-	/* leemos de memoria compartida el mapa */
-	/* We open the shared memory */
-	fd_shm = shm_open(SHM_MAP_NAME,
-					  O_RDONLY, /* Obtain it and open for reading */
-					  0);		/* Unused */
-	if (fd_shm == -1)
-	{
-		fprintf(stderr, "Error opening the shared memory segment \n");
-		return NULL;
-	}
-
-	/* mapeo del mapa */
-	mapa = mmap(NULL, sizeof(*mapa),
-				PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
-
-	if (mapa == NULL)
-	{
-		printf("[ERROR] No se ha podido mapear la memoria compartida\n");
-	}
-
-	sem_post(sem_shared_memory);
-
-	return mapa;
-	/*accedemos a los recursos del mapa mediante mapa->*/
-}
-
-void pipe_since_simulador(int tuberia[2])
-{
-	int pipe_status;
-	char mensaje[MAX_MENSAJE] = {0};
-	int nave[2]; /*tuberia para comunicarnos con las naves*/
+	int ret;
 	int i;
-	int accion_1, accion_2;
+	pid_t naves[N_NAVES];
+	int nave_pipe[N_EQUIPOS][2];
+	char mensaje[MAX_MENSAJE] = {0};
+
 	/*comprbamos si se ha recibido de forma correcta la tuberia para poder realizar su lecturas*/
 	if (tuberia == 0)
 		return;
 
+	// Read message from simulator
 	read(tuberia[0], &mensaje, sizeof(mensaje));
 	close(tuberia[1]);
 
+	// Crete the ships with forks
+	for (i = 0; i < N_NAVES; i++) {
+		naves[i] = fork();
+		if (naves[i] < 0) {
+			printf("[ERROR] Error creating nave for nave %d\n", i);
+			ret = 1;
+			goto FREE_ALL;
+		}
+		else if (naves[i] == 0) { // NAVE
+#ifdef DEBUG
+			printf("[JEFE %d] Launching ship %d\n", id, i);
+#endif
+			naves_main(i, nave_pipe[i]);
+			goto FREE_ALL;
+		}
+	}
+
+	// Receive orders from simulator and send others to ships
+	controller_jefe(id, nave_pipe, mensaje);
+
+	FREE_ALL:
+
+	// Liberar pipes de las naves
+	for (i = 0; i < N_NAVES; i++) {
+		close(nave_pipe[i][0]);
+		close(nave_pipe[i][1]);
+		wait(NULL);
+	}
+	return ret;
+}
+
+void controller_jefe(int id, int naves[N_NAVES][2], char *mensaje)
+{
+	int nave[2]; /*tuberia para comunicarnos con las naves*/
+	int i;
+	int accion_1, accion_2;
+	char envio_accion_1[MAX_MENSAJE] = {0};
+	char envio_accion_2[MAX_MENSAJE] = {0};
+
 	/* Creamos una tuberia para la comunicacion con las naves */
-	pipe_status = pipe(nave);
-	if (pipe_status == -1)
+	if (pipe(nave) == -1)
 	{
-		printf("Error al crear la tuberia para comunicarnos con las naves\n");
+		printf("[ERROR] Error al crear la tuberia para comunicarnos con las naves\n");
 		return;
 	}
 
 	/*comparamos el mensaje recibido para ver que tipo de instrucciones hemos recibido */
 	if (strcmp(mensaje, "TURNO") == 0)
 	{
-		printf("DEBUG: turno OK\n");
+#ifdef DEBUG
+		printf("[JEFE %d] Executing TURNO\n", id);
+#endif
 		/*creamos un numero aleatorio y se le enviamos a la nave */
 		for (i = 0; i <= N_EQUIPOS; i++)
 		{
@@ -119,30 +103,37 @@ void pipe_since_simulador(int tuberia[2])
 			getrandom(&seed, sizeof(seed), 0);
 			srand(seed);
 
-			accion_1 = jefe_random_accion();
-			if (accion_1 == -1)
-			{
-				printf("Se ha recibido una accion invalida\n");
+			// Mandar accion 1 a las naves
+			accion_1 = jefe_random_accion(id);
+			if(accion_1 == -1){
+				printf("[ERROR] Se ha recibido una accion invalida\n");
 				return;
 			}
-			/* 1º TURNO le enviamos la accion a las naves */
-			write(nave[1], &accion_1, sizeof(accion_1));
-			close(nave[0]);
 
-			accion_2 = jefe_random_accion();
-			if (accion_2 == -1)
-			{
-				printf("Se ha recibido una accion invalida\n");
+			if(accion_1 == 1) strcpy(envio_accion_1,"ATACAR");
+			else strcpy(envio_accion_1,"MOVER_ALEATORIO");
+
+			for (int j = 0; j < N_NAVES; j++)
+				write(nave[1], envio_accion_1, sizeof(envio_accion_1));
+
+			// Mandar accion 2 a las naves
+			accion_2 = jefe_random_accion(id);
+			if(accion_2 == -1) {
+				printf("[ERROR] Se ha recibido una accion invalida\n");
 				return;
 			}
-			/* 2º TURNO  le enviamos la accion a las naves */
-			write(nave[1], &accion_2, sizeof(accion_2));
-			close(nave[0]);
+			if(accion_2 == 1) strcpy(envio_accion_2,"ATACAR");
+			else strcpy(envio_accion_2,"MOVER_ALEATORIO");
+
+			for (int j = 0; j < N_NAVES; j++)
+				write(nave[1], envio_accion_2, sizeof(envio_accion_2));
 		}
 	}
 	else if (strncmp(mensaje, "DESTRUIR", 7) == 0)
 	{
-		printf("DEBUG: destruir OK\n");
+#ifdef DEBUG
+		printf("[JEFE %d] Executing DESTRUIR\n", id);
+#endif
 		/* si se recibe destruir se tiene que enviar otro mensaje para ver que nave se quiere destuir */
 		/*comprobamos que el numero de la nave es correcto */
 
@@ -155,7 +146,9 @@ void pipe_since_simulador(int tuberia[2])
 	}
 	else if (strcmp(mensaje, "FIN") == 0)
 	{
-		printf("DEBUG: fin OK\n");
+#ifdef DEBUG
+		printf("[JEFE %d] Executing FIN\n", id);
+#endif
 		/*FIN: Manda finalizar a los procesos nave mediante señal SIGTERM*/
 		/* Destruye todas sus naves excepto a si mismo (jefe)*/
 		kill(getpid(), SIGTERM);
@@ -168,30 +161,31 @@ void pipe_since_simulador(int tuberia[2])
 	}
 	else
 	{
-		printf("Se ha recibido una instrcion no válida\n");
+		printf("[ERROR] Se ha recibido una instrcion no válida\n");
 		return;
 	}
 
 	return;
 }
 
-int jefe_random_accion()
+int jefe_random_accion(int id)
 {
 	int resultado;
-	/*elige un numero aleatorio entre el 1,2 */
-
-	/* el jefe solo elige mover o atacar */
 
 	resultado = (rand() % 2) + 1;
 	if (resultado == 1)
 	{
-		printf("DEBUG: Resultado = %d -> ATACAR\n", resultado);
-		return 1;
+#ifdef DEBUG
+		printf("[JEFE %d] Rand Resultado = %d -> ATACAR\n", resultado, id);
+#endif
+		return 0;
 	}
 	if (resultado == 2)
 	{
-		printf("DEBUG: Resultado = %d -> MOVER ALEATORIO \n", resultado);
-		return 2;
+#ifdef DEBUG
+		printf("[JEFE %d] Rand Resultado = %d -> MOVER ALEATORIO \n", resultado, id);
+#endif
+		return 1;
 	}
 	return -1;
 

@@ -13,12 +13,14 @@ devuelve el mapa si todo va bien
 */
 tipo_mapa *open_shared_memory();
 
+int jefe_main(int id, int tuberia[2]);
+
 /*
 recibe una tuberia desde el simulador para la comunicacion
 devuelve -1 en caso de ERROR
 devuele 1 si todo va bien
 */
-void pipe_since_simulador(int tuberia[2] );
+void controller_jefe(int id, int naves[N_NAVES][2], char *mensaje);
 
 /* elige la accion que va a realizar su nave */
 int jefe_random_accion();
