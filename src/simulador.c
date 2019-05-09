@@ -19,31 +19,86 @@
 #include "naves.h"
 #include "jefe.h"
 
-coords random_coords(tipo_mapa *mapa, int team)
+Coords random_coords(tipo_mapa *mapa, int team)
 {
-	coords r_coords;
+	Coords r_coords;
 	int found_empty_space = 0;
 
 	while (found_empty_space == 0) {
-		r_coords.x = rand() % 10;
-		r_coords.y = rand() % 10;
-
-		if (team == 1){
-			r_coords.x += 10;
-		}
-		else if (team == 2) {
-			r_coords.y += 10;
-		}
-		else if (team == 3) {
-			r_coords.x += 10;
-			r_coords.y += 10;
-		}
+		r_coords.x = rand() % MAPA_MAXX;
+		r_coords.y = rand() % MAPA_MAXY;
 
 		if (mapa_is_casilla_vacia(mapa, r_coords.x, r_coords.y))
 			found_empty_space = 1;
 	}
 
 	return r_coords;
+}
+
+int execute_order(tipo_mapa *mapa, Nave_orden order)
+{
+	switch (order.orden) {
+	case 0: // MOVER
+#ifdef DEBUG
+		printf("Moving order by ship\n");
+#endif
+		if (!is_casilla_inside(mapa, order.destino.y, order.destino.x))
+			return EXIT_FAILURE;
+
+		if (!mapa_is_casilla_vacia(mapa, order.destino.y, order.destino.x))
+			return EXIT_FAILURE;
+
+		// realizar accion
+
+		break;
+
+	case 1: // ATACAR
+#ifdef DEBUG
+		printf("Attacking order by ship\n");
+#endif
+		if (!is_casilla_inside(mapa, order.destino.y, order.destino.x))
+			return EXIT_FAILURE;
+
+		if (mapa_get_distancia(order.destino.y, order.destino.x,
+			order.origen.y, order.origen.x) > ATAQUE_ALCANCE)
+			return EXIT_FAILURE;
+
+		// realizar accion
+
+		break;
+
+	default: // ERROR
+		printf("[ERROR] Order received by ship is not understood\n");
+		return EXIT_FAILURE;
+		break;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+int check_winner(tipo_mapa *mapa)
+{
+	int team_alive = -1;
+	int equipos_muertos = 0;
+
+	// For each team
+	for (int i = 0; i < N_EQUIPOS; i++)
+	{
+		// Count dead teams
+		if (mapa_get_num_naves(mapa, i) == 0) {
+			equipos_muertos++;
+		} else {
+			// Save the alive team
+			team_alive = i;
+		}
+	}
+
+	// If only one team is alive, return it
+	if (equipos_muertos == N_EQUIPOS - 1)
+		return team_alive;
+
+	// Still more than one teams alive
+	return -1;
 }
 
 int receive_msg(mqd_t queue, Nave_orden *buff)
@@ -59,7 +114,7 @@ int receive_msg(mqd_t queue, Nave_orden *buff)
 
 int main()
 {
-	int keep_running = 1;
+	int check = -1;
 	sem_t *ready = NULL;
 	int ret = 0;
 	int i, j;
@@ -104,7 +159,7 @@ int main()
 	srand(time(NULL));
 	for(i=0;i<N_EQUIPOS;i++) {
 		for(j=0;j<N_NAVES;j++) {
-			coords r_coords = random_coords(mapa, i);
+			Coords r_coords = random_coords(mapa, i);
 
 			nave.vida = VIDA_MAX;
 			nave.posx = r_coords.x;
@@ -141,7 +196,7 @@ int main()
 	}
 
 	// Spawn jefes (one for each team)
-	char buff[] = "testing";
+	char buff[] = "TURNO";
 	for (i = 0; i < N_EQUIPOS; i++) {
 		teams[i] = fork();
 		if (teams[i] < 0) {
@@ -152,8 +207,6 @@ int main()
 		else if (teams[i] == 0) { // JEFE
 			pipe_since_simulador(jefe_pipe[i]);
 			goto FREE_PIPES;
-		} else {
-			write(jefe_pipe[i][1], buff, strlen(buff));
 		}
 	}
 
@@ -178,11 +231,41 @@ int main()
 		return -1;
 	}
 
-	Nave_orden rec_test;
-	receive_msg(queue, &rec_test);
-	printf(">>>>%d\n", rec_test.objective);
+	// Main loop
+	while (check == -1) {
+		// Check if we are finished
+		check = check_winner(mapa);
 
-	FREE_MQ:
+		// Get map tidy for next turn
+
+		// Manda los turnos a los jefes
+#ifdef DEBUG
+		printf("Sending TURNO to all jefes\n");
+#endif
+		for (int i = 0; i < N_EQUIPOS; i++)
+			write(jefe_pipe[i][1], "TURNO", strlen(buff));
+
+#ifdef DEBUG
+		printf("Waiting some seconds...\n");
+#endif
+		sleep(1);
+
+#ifdef DEBUG
+		printf("Waiting to receive actions from ships\n");
+#endif
+		// Execute actions sent by ships
+		for (int i = 0; i < N_NAVES; i++) {
+			Nave_orden rec_test;
+			receive_msg(queue, &rec_test);
+			execute_order(mapa, rec_test);
+		}
+	}
+
+	// Tell jefes it is over
+	for (int i = 0; i < N_EQUIPOS; i++)
+		write(jefe_pipe[i][1], "FIN", strlen(buff));
+
+	//FREE_MQ:
 	mq_close(queue);
 	mq_unlink(QUEUE_NAME);
 

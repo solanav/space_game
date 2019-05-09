@@ -41,6 +41,17 @@ char mapa_get_symbol(tipo_mapa *mapa, int posy, int posx)
 	return mapa->casillas[posy][posx].simbolo;
 }
 
+bool is_casilla_inside(tipo_mapa *mapa, int posy, int posx)
+{
+	if (posy < 0 || posx < 0)
+		return false;
+
+	if (posy > MAPA_MAXY || posx > MAPA_MAXX)
+		return false;
+
+	return true;
+}
+
 bool mapa_is_casilla_vacia(tipo_mapa *mapa, int posy, int posx)
 {
 	return (mapa->casillas[posy][posx].equipo < 0);

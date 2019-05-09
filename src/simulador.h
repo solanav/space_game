@@ -55,7 +55,7 @@ typedef struct {
 typedef struct {
 	int x;
 	int y;
-} coords;
+} Coords;
 
 #define SHM_MAP_NAME "/shm_naves"
 

@@ -21,11 +21,9 @@
 
 typedef struct {
 	int orden;
-	int objective;
+	Coords destino;
+	Coords origen;
 } Nave_orden;
-
-// main
-int pseudo_main();
 
 // Funcion para crear la cola de mensajes nave->simulador
 int create_queue();

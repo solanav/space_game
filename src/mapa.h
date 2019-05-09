@@ -9,6 +9,9 @@
 
 #include "simulador.h"
 
+// Comprueba que una casilla este dentro del mapa
+bool is_casilla_inside(tipo_mapa *mapa, int posy, int posx);
+
 // Pone una casilla del mapa a vacío
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx);
 
@@ -29,9 +32,6 @@ char mapa_get_symbol(tipo_mapa *mapa, int posy, int posx);
 
 // Chequea si la casilla y,x está vacía en el mapa
 bool mapa_is_casilla_vacia(tipo_mapa *mapa, int posy, int posx);
-
-// Chequea si el contenido de casilla corresponde a una casilla vacia
-bool casilla_is_vacia(tipo_mapa *mapa, tipo_casilla casilla);
 
 // Restaura los símbolos del mapa dejando sólo las naves vivas
 void mapa_restore(tipo_mapa *mapa);

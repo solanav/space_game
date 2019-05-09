@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/random.h>
 
 #include <time.h>
 #include <semaphore.h>
@@ -113,6 +114,11 @@ void pipe_since_simulador(int tuberia[2])
 		/*creamos un numero aleatorio y se le enviamos a la nave */
 		for (i = 0; i <= N_EQUIPOS; i++)
 		{
+			// Crypto-secure because that is really important for the game :)
+			int seed = 0;
+			getrandom(&seed, sizeof(seed), 0);
+			srand(seed);
+
 			accion_1 = jefe_random_accion();
 			if (accion_1 == -1)
 			{

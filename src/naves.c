@@ -37,10 +37,11 @@ int main()
 
 	Nave_orden orden_test;
 	orden_test.orden = 0;
-	orden_test.objective = 69;
+	orden_test.origen.x = 5;
+	orden_test.origen.y = 6;
+	orden_test.destino.x = 7;
+	orden_test.destino.y = 8;
 	send_msg(queue, orden_test);
-
-	getchar();
 
 	mq_close(queue);
 
