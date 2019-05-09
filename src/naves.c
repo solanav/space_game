@@ -42,35 +42,43 @@ int naves_main(int id, int team, int tuberia_nave[2])
 	if (tuberia_nave == 0)
 		return -1;
 
-	/* Leemos el mensaje que nos ha enviado el jefe */
-	read(tuberia_nave[0], &accion_recibida, sizeof(accion_recibida));
-	close(tuberia_nave[1]);
+	while (1)
+	{
+		/* Leemos el mensaje que nos ha enviado el jefe */
+		read(tuberia_nave[0], &accion_recibida, sizeof(accion_recibida));
+		close(tuberia_nave[1]);
 
 #ifdef DEBUG
-	printf("\t<NAVE %d> Accion recibida: %c\n", id, accion_recibida[0]);
+		printf("\t<NAVE %d> Accion recibida: %c\n", id, accion_recibida[0]);
 #endif
 
-	// We send the corresponding order to simulador so it executes it
-	Nave_orden orden;
-	orden.id = id;
-	orden.team = team;
-	orden.dir = rand() % 4;
+		// We send the corresponding order to simulador so it executes it
+		Nave_orden orden;
+		orden.id = id;
+		orden.team = team;
+		orden.dir = rand() % 4;
 
-	if (accion_recibida[0] == 'M')
-	{ // MOVE
-		orden.orden = 0;
-		send_msg(queue, orden);
-	}
-	else if (accion_recibida[0] == 'A')
-	{ // ATTACK
-		orden.orden = 1;
-		send_msg(queue, orden);
-	}
-	else
-	{
-		printf("[ERROR] Failed to find the action sent to ship\n");
+		if (accion_recibida[0] == 'M')
+		{ // MOVE
+			orden.orden = 0;
+			send_msg(queue, orden);
+		}
+		else if (accion_recibida[0] == 'A')
+		{ // ATTACK
+			orden.orden = 1;
+			send_msg(queue, orden);
+		}
+		else if (accion_recibida[0] == 'D')
+		{ // AUTO-DESTROY
+			goto FREE_ALL;
+		}
+		else
+		{
+			printf("[ERROR] Failed to find the action sent to ship\n");
+		}
 	}
 
+	FREE_ALL:
 	mq_close(queue);
 	exit(EXIT_SUCCESS);
 }

@@ -3,6 +3,7 @@
 		"stdbool.h": "c",
 		"unistd.h": "c",
 		"mqueue.h": "c",
-		"stat.h": "c"
+		"stat.h": "c",
+		"mapa.h": "c"
 	}
 }

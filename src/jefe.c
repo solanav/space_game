@@ -34,7 +34,7 @@ int jefe_main(int id, int tuberia[2])
 	int nave_pipe[N_EQUIPOS][2];
 	char mensaje[MAX_MENSAJE] = {0};
 
-	/*comprbamos si se ha recibido de forma correcta la tuberia para poder realizar su lecturas*/
+	/*comprbamos si se ha recibido  forma correcta la tuberia para poder realizar su lecturas*/
 	if (tuberia == 0)
 		return EXIT_FAILURE;
 
@@ -94,7 +94,6 @@ FREE_ALL:
 
 void controller_jefe(int id, int naves[N_NAVES][2], char *mensaje)
 {
-	int i;
 	int accion_1, accion_2;
 	char envio_accion_1[MAX_MENSAJE] = {0};
 	char envio_accion_2[MAX_MENSAJE] = {0};
@@ -105,28 +104,29 @@ void controller_jefe(int id, int naves[N_NAVES][2], char *mensaje)
 #ifdef DEBUG
 		printf("[JEFE %d] Executing TURNO\n", id);
 #endif
-		/*creamos un numero aleatorio y se le enviamos a la nave */
-		for (i = 0; i <= N_EQUIPOS; i++)
-		{
-			// Crypto-secure because that is really important for the game :)
-			int seed = 0;
-			getrandom(&seed, sizeof(seed), 0);
-			srand(seed);
 
-			// Mandar accion 1 a las naves
-			accion_1 = rand() % 2;
-			accion_1 == 1 ? strcpy(envio_accion_1, "ATACAR") : strcpy(envio_accion_1, "MOVER_ALEATORIO");
+		// Crypto-secure because that is really important for the game :)
+		int seed = 0;
+		getrandom(&seed, sizeof(seed), 0);
+		srand(seed);
 
-			for (int j = 0; j < N_NAVES; j++)
-				write(naves[j][1], envio_accion_1, sizeof(envio_accion_1));
+		// Mandar accion 1 a las naves
+		accion_1 = rand() % 2;
+		accion_1 == 1 ? strcpy(envio_accion_1, "ATACAR") : strcpy(envio_accion_1, "MOVER_ALEATORIO");
 
-			// Mandar accion 2 a las naves
-			accion_2 = rand() % 2;
-			accion_2 == 1 ? strcpy(envio_accion_1, "ATACAR") : strcpy(envio_accion_1, "MOVER_ALEATORIO");
+		for (int i = 0; i < N_NAVES; i++)
+			write(naves[i][1], envio_accion_1, sizeof(envio_accion_1));
 
-			for (int j = 0; j < N_NAVES; j++)
-				write(naves[j][1], envio_accion_2, sizeof(envio_accion_2));
-		}
+		// Mandar accion 2 a las naves
+		accion_2 = rand() % 2;
+		accion_2 == 1 ? strcpy(envio_accion_2, "ATACAR") : strcpy(envio_accion_2, "MOVER_ALEATORIO");
+
+		for (int i = 0; i < N_NAVES; i++)
+			write(naves[i][1], envio_accion_2, sizeof(envio_accion_2));
+
+#ifdef DEBUG
+		printf("[JEFE %d] Done with TURNO\n", id);
+#endif
 	}
 	else if (strncmp(mensaje, "DESTRUIR", 7) == 0)
 	{
@@ -134,7 +134,7 @@ void controller_jefe(int id, int naves[N_NAVES][2], char *mensaje)
 		printf("[JEFE %d] Executing DESTRUIR\n", id);
 #endif
 		int num_nave = mensaje[8] - '0';
-		write(naves[num_nave][1], &mensaje, sizeof(mensaje));
+		write(naves[num_nave][1], &mensaje, 7);
 	}
 	else if (strcmp(mensaje, "FIN") == 0)
 	{

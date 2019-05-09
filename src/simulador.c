@@ -81,6 +81,10 @@ int execute_order(tipo_mapa *mapa, Nave_orden order)
 		if (!mapa_is_casilla_vacia(mapa, destino.y, destino.x))
 			return EXIT_FAILURE;
 
+#ifdef DEBUG
+		printf("[[[[ %d/%d moviendose a %d/%d ]]]]\n", nave.posy, nave.posx, destino.y, destino.x);
+#endif
+
 		// limpiar casilla anterior
 		mapa_clean_casilla(mapa, nave.posy, nave.posx);
 
@@ -108,6 +112,16 @@ int execute_order(tipo_mapa *mapa, Nave_orden order)
 		// Shoot
 		mapa_send_misil(mapa, nave.posy, nave.posx, enemigo.posy, enemigo.posx);
 
+		// Reduce live of enemy
+		enemigo.vida -= ATAQUE_DANO;
+
+		// Update enemigo
+		mapa_set_nave(mapa, enemigo);
+
+#ifdef DEBUG
+		printf("[[[[ %d/%d disparando a %d/%d ]]]]\n", nave.posy, nave.posx, enemigo.posy, enemigo.posx);
+#endif
+
 		break;
 
 	default: // ERROR
@@ -116,6 +130,7 @@ int execute_order(tipo_mapa *mapa, Nave_orden order)
 		break;
 	}
 
+	sleep(2);
 	return EXIT_SUCCESS;
 }
 
@@ -210,6 +225,8 @@ int main()
 	srand(time(NULL));
 	for (i = 0; i < N_EQUIPOS; i++)
 	{
+		mapa_set_num_naves(mapa, i, N_NAVES);
+
 		for (j = 0; j < N_NAVES; j++)
 		{
 			Coords r_coords = random_coords(mapa);
@@ -219,7 +236,7 @@ int main()
 			nave.posy = r_coords.y;
 			nave.equipo = i;
 			nave.numNave = j;
-			nave.viva = ALIVE;
+			nave.viva = true;
 
 			if (mapa_set_nave(mapa, nave) == -1)
 			{
@@ -234,7 +251,7 @@ int main()
 	if ((ready = sem_open(READY_SEM, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED)
 	{
 		printf("[ERROR] Semaphore ready failed");
-		goto FREE_MAP;
+		goto FREE_JEFES;
 	}
 
 	sem_post(ready);
@@ -297,26 +314,54 @@ int main()
 		check = check_winner(mapa);
 
 		// Get map tidy for next turn
+		mapa_restore(mapa);
 
 		// Manda los turnos a los jefes
 #ifdef DEBUG
 		printf("\n\n\nSending TURNO to all jefes\n");
 #endif
+		// Check for dead ships and send "DESTROY" or "TURNO"
 		for (int i = 0; i < N_EQUIPOS; i++)
-			write(jefe_pipe[i][1], "TURNO", strlen("TURNO"));
+		{
+			for (int j = 0; j < N_NAVES; j++)
+			{
+				tipo_nave nave = mapa_get_nave(mapa, i, j);
+				if (nave.vida <= 0)
+				{
+					// Update map with dead nave
+					nave.viva = false;
+					mapa_set_nave(mapa, nave);
+					mapa_set_num_naves(mapa, i, mapa_get_num_naves(mapa, i) - 1);
 
+					// Tell the nave to auto destroy
+					char command[10] = "DESTRUIR";
+					command[8] = j + '0'; // sobreescribimos '\0' :)
+					command[9] = '\0';	// lo restauramos
+					write(jefe_pipe[i][1], command, strlen(command));
+				}
+			}
+
+			write(jefe_pipe[i][1], "TURNO", strlen("TURNO"));
+		}
 #ifdef DEBUG
 		printf("Waiting to receive actions from ships\n");
 #endif
+		int naves_vivas = 0;
+		for (int i = 0; i < N_EQUIPOS; i++)
+			naves_vivas += mapa_get_num_naves(mapa, i);
+
 		// Execute 2 actions per ship
-		for (int i = 0; i < N_NAVES * 2; i++)
+		for (int i = 0; i < naves_vivas; i++)
 		{
+#ifdef DEBUG
+			printf("[%d/%d]   ", i, naves_vivas);
+#endif
 			Nave_orden rec_test;
 			receive_msg(queue, &rec_test);
 			execute_order(mapa, rec_test);
 		}
 
-		sleep(5);
+		sleep(1);
 	}
 
 	// Tell jefes it is over
@@ -339,6 +384,10 @@ FREE_PIPES:
 FREE_SEM:
 	sem_close(ready);
 	sem_unlink(READY_SEM);
+
+FREE_JEFES:
+	for (i = 0; i < N_EQUIPOS; i++)
+		wait(NULL);
 
 // Liberar mapa
 FREE_MAP:
