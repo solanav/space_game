@@ -48,7 +48,7 @@ int main()
 	sem_t *ready = NULL;
 	int ret = 0;
 	int i, j;
-	tipo_mapa *mapa;
+	tipo_mapa *mapa = NULL;
 	tipo_nave nave;
 	pid_t teams[N_EQUIPOS];
 	int fd_shm;
@@ -57,7 +57,7 @@ int main()
 	// Create shared memory for map
 	fd_shm = shm_open(SHM_MAP_NAME,
 		O_RDWR | O_CREAT | O_EXCL,
-		S_IROTH | S_IWOTH);
+		S_IRUSR | S_IWUSR);
 
 	if (fd_shm == -1) {
 		printf("[ERROR] No se ha podido crear la memoria compartida\n");
@@ -95,7 +95,7 @@ int main()
 			nave.posx = r_coords.x;
 			nave.posy = r_coords.y;
 			nave.equipo = i;
-			nave.numNave = j + i * N_NAVES;
+			nave.numNave = j;
 			nave.viva = ALIVE;
 
 			if (mapa_set_nave(mapa, nave) == -1) {
@@ -107,11 +107,15 @@ int main()
 	}
 
 	// Comunicar al monitor que esta ready esto
-	if((ready = sem_open(READY_SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR,0))
+	if((ready = sem_open(READY_SEM, O_CREAT, S_IRUSR | S_IWUSR, 0))
 		== SEM_FAILED)
 	{
-		perror("sem_open");exit(EXIT_FAILURE);
+		printf("[ERROR] Semaphore ready failed");
+		goto FREE_MAP;
 	}
+
+	sem_post(ready);
+	sleep(100);
 
 	// Create pipes for jefes
 	for (i = 0; i < N_EQUIPOS; i++) {
@@ -119,7 +123,7 @@ int main()
 			// TODO: Perdida de memoria
 			printf("[ERROR] No se ha podido crear el pipe para la jefa\n");
 			ret = 1;
-			goto FREE_MAP;
+			goto FREE_SEM;
 		}
 	}
 
@@ -139,18 +143,22 @@ int main()
 		} else {
 			memset(buff, 0, sizeof(buff));
 			read(jefe_pipe[i][0], buff, sizeof(buff));
-			printf(">>> %s\n", buff);
+			printf("[%d] RECEIVED >>> %s\n", getpid(), buff);
 		}
 	}
 
 	FREE_ALL:
 
 	// Liberar pipes de los jefasos
-	//FREE_PIPES:
 	for (i = 0; i < N_EQUIPOS; i++) {
 		close(jefe_pipe[i][0]);
 		close(jefe_pipe[i][1]);
 	}
+
+	// Liberar semaforo ready
+	FREE_SEM:
+	sem_close(ready);
+	sem_unlink(READY_SEM);
 
 	// Liberar mapa
 	FREE_MAP:

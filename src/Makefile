@@ -9,8 +9,11 @@ NC=\e[0m
 
 all: simulador monitor
 
+call: clean all
+
 clean:
 	rm -r -f $(TARGET)
+	sudo rm -r -f /dev/shm/*
 
 simulador:
 	mkdir -p $(TARGET)
