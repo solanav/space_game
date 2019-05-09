@@ -16,7 +16,7 @@ int naves_main(int id, int tuberia_nave[2])
 {
 	mqd_t queue;
 	struct mq_attr attributes;
-	char accion_recibida[32] = "X";
+	char accion_recibida[32] = {0};
 
 	// Create and open the queue
 	attributes.mq_flags = 0;
@@ -45,11 +45,11 @@ int naves_main(int id, int tuberia_nave[2])
 	close(tuberia_nave[1]);
 
 #ifdef DEBUG
-	printf("<NAVE %d> Accion recibida: %s\n", id, accion_recibida);
+	printf("<NAVE %d> Accion recibida: %c\n", id, accion_recibida[0]);
 #endif
 
 	// We send the corresponding order to simulador so it executes it
-	if (strcmp(accion_recibida, "M") == 0) { // MOVE
+	if (accion_recibida[0] == 'M') { // MOVE
 		Nave_orden orden_test;
 		orden_test.orden = 0;
 		orden_test.origen.x = 5;
@@ -57,15 +57,23 @@ int naves_main(int id, int tuberia_nave[2])
 		orden_test.destino.x = 7;
 		orden_test.destino.y = 8;
 
+#ifdef DEBUG
+		printf("<NAVE %d> Sending action to simulator\n", id);
+#endif
+
 		send_msg(queue, orden_test);
 	}
-	else if (strcmp(accion_recibida, "A") == 0) { // ATTACK
+	else if (accion_recibida[0] == 'A') { // ATTACK
 		Nave_orden orden_test;
 		orden_test.orden = 1;
 		orden_test.origen.x = 5;
 		orden_test.origen.y = 6;
 		orden_test.destino.x = 7;
 		orden_test.destino.y = 8;
+
+#ifdef DEBUG
+		printf("<NAVE %d> Sending action to simulator\n", id);
+#endif
 
 		send_msg(queue, orden_test);
 	}
