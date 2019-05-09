@@ -5,6 +5,7 @@
 
 #define N_EQUIPOS 3 // Número de equipos
 #define N_NAVES 3 // Número de naves por equipo
+#define READY_SEM "/ready_sem"
 
 /*** SCREEN ***/
 extern char symbol_equipos[N_EQUIPOS]; // Símbolos de los diferentes equipos en el mapa (mirar mapa.c)

@@ -11,8 +11,10 @@
 #include <math.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <semaphore.h>
 
-#include <mapa.h>
+#include "mapa.h"
 
 coords random_coords(tipo_mapa *mapa, int team)
 {
@@ -43,6 +45,7 @@ coords random_coords(tipo_mapa *mapa, int team)
 
 int main()
 {
+	sem_t *ready = NULL;
 	int ret = 0;
 	int i, j;
 	tipo_mapa *mapa;
@@ -103,6 +106,13 @@ int main()
 		}
 	}
 
+	// Comunicar al monitor que esta ready esto
+	if((ready = sem_open(READY_SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR,0))
+		== SEM_FAILED)
+	{
+		perror("sem_open");exit(EXIT_FAILURE);
+	}
+
 	// Create pipes for jefes
 	for (i = 0; i < N_EQUIPOS; i++) {
 		if (pipe(jefe_pipe[i]) == -1) {
@@ -136,7 +146,7 @@ int main()
 	FREE_ALL:
 
 	// Liberar pipes de los jefasos
-	FREE_PIPES:
+	//FREE_PIPES:
 	for (i = 0; i < N_EQUIPOS; i++) {
 		close(jefe_pipe[i][0]);
 		close(jefe_pipe[i][1]);
@@ -153,6 +163,3 @@ int main()
 	FREE_NADA:
 	return ret;
 }
-
-
-

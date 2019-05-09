@@ -11,9 +11,9 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#include <simulador.h>
-#include <gamescreen.h>
-#include <mapa.h>
+#include "simulador.h"
+#include "gamescreen.h"
+#include "mapa.h"
 
 
 void mapa_print(tipo_mapa *mapa)

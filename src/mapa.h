@@ -8,9 +8,6 @@
 #include <stdbool.h>
 
 #include "simulador.h"
-#include "naves.h"
-#include "jefe.h"
-
 
 // Pone una casilla del mapa a vacío
 int mapa_clean_casilla(tipo_mapa *mapa, int posy, int posx);
